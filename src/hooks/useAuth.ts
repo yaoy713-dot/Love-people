@@ -19,10 +19,7 @@ export function useAuth() {
     });
   }, []);
 
-  const signIn = () => {
-    const provider = new GoogleAuthProvider();
-    return signInWithPopup(auth, provider);
-  };
+  const signIn = () => signInWithPopup(auth, new GoogleAuthProvider());
 
   const signOut = () => firebaseSignOut(auth);
 

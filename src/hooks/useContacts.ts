@@ -8,10 +8,14 @@ export function useContacts(uid: string | null) {
 
   useEffect(() => {
     if (!uid) return;
-    return subscribeContacts(uid, (loaded) => {
+    const unsub = subscribeContacts(uid, (loaded) => {
       setContacts(loaded);
       setReady(true);
     });
+    // Safety valve: if Firestore hasn't responded in 6s (e.g. IndexedDB blocked
+    // in iOS private browsing), mark ready so the user isn't stuck forever.
+    const timer = setTimeout(() => setReady(true), 6000);
+    return () => { unsub(); clearTimeout(timer); };
   }, [uid]);
 
   return { contacts, ready };
