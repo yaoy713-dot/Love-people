@@ -20,10 +20,12 @@ interface Props {
   onNoAnswer: (contactId: string) => void;
   onCompleted: (contactId: string, note?: NoteFields) => Promise<void>;
   onSelectContact: (id: string) => void;
+  onAddContact: () => void;
+  onHelp: () => void;
   profileToggle: React.ReactNode;
 }
 
-export function HomeView({ cards, allContacts, topics, onBusy, onNoAnswer, onCompleted, onSelectContact, profileToggle }: Props) {
+export function HomeView({ cards, allContacts, topics, onBusy, onNoAnswer, onCompleted, onSelectContact, onAddContact, onHelp, profileToggle }: Props) {
   const { user } = useAuth();
   const [sheetContact, setSheetContact] = useState<Contact | null>(null);
 
@@ -31,6 +33,7 @@ export function HomeView({ cards, allContacts, topics, onBusy, onNoAnswer, onCom
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dayName = dayNames[today.getDay()];
   const upcomingBirthdays = getUpcomingBirthdays(allContacts);
+  const hasContacts = allContacts.length > 0;
 
   const discussTopics = sheetContact
     ? topics.filter((t) => t.contactId === sheetContact.id && t.status === 'open' && t.type === 'discuss')
@@ -60,7 +63,16 @@ export function HomeView({ cards, allContacts, topics, onBusy, onNoAnswer, onCom
       <div className="px-5 pt-6 pb-3">
         <div className="flex items-center justify-between mb-1">
           <div className="text-sm text-stone-400 font-medium">{dayName}</div>
-          {profileToggle}
+          <div className="flex items-center gap-2">
+            {profileToggle}
+            <button
+              onClick={onHelp}
+              className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 text-sm font-medium"
+              aria-label="How it works"
+            >
+              ?
+            </button>
+          </div>
         </div>
         <h1 className="text-2xl font-bold text-stone-900">Love People</h1>
       </div>
@@ -85,7 +97,29 @@ export function HomeView({ cards, allContacts, topics, onBusy, onNoAnswer, onCom
           </div>
         )}
 
-        {cards.length === 0 ? (
+        {!hasContacts ? (
+          <div className="mt-2 flex flex-col gap-3">
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-100 text-center">
+              <div className="text-4xl mb-3">🤍</div>
+              <h2 className="font-semibold text-stone-900 mb-2">Welcome to Love People</h2>
+              <p className="text-sm text-stone-500 leading-relaxed mb-5">
+                Add the people you want to stay close to, set how often you want to call them, and the app will tell you who's due each day.
+              </p>
+              <button
+                onClick={onAddContact}
+                className="w-full bg-stone-900 text-white rounded-2xl py-3.5 font-medium text-sm active:scale-95 transition-transform"
+              >
+                Add your first person
+              </button>
+            </div>
+            <button
+              onClick={onHelp}
+              className="text-sm text-stone-400 text-center py-2 underline underline-offset-2"
+            >
+              How does it work?
+            </button>
+          </div>
+        ) : cards.length === 0 ? (
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-100 text-center mt-2">
             <div className="text-3xl mb-3">✨</div>
             <h2 className="font-semibold text-stone-900 mb-1">All caught up</h2>

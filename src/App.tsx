@@ -13,6 +13,7 @@ import { ContactsView } from './views/ContactsView';
 import { ContactDetailView } from './views/ContactDetailView';
 import { HistoryView } from './views/HistoryView';
 import { AddContactSheet } from './views/AddContactSheet';
+import { HelpSheet } from './views/HelpSheet';
 import { Nav } from './components/Nav';
 import type { ActiveView, Profile, Frequency } from './types';
 
@@ -27,6 +28,7 @@ export default function App() {
   const [activeProfile, setActiveProfile] = useState<Profile>('personal');
   const [detailContactId, setDetailContactId] = useState<string | null>(null);
   const [showAddContact, setShowAddContact] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const profileContacts = contacts.filter((c) => (c.profile ?? 'personal') === activeProfile);
   const dashboard = useDashboard(user?.uid ?? '', profileContacts, callLogs);
@@ -96,6 +98,8 @@ export default function App() {
             onNoAnswer={dashboard.handleNoAnswer}
             onCompleted={dashboard.handleCompleted}
             onSelectContact={(id) => setDetailContactId(id)}
+            onAddContact={() => setShowAddContact(true)}
+            onHelp={() => setShowHelp(true)}
             profileToggle={profileToggle}
           />
         ) : activeView === 'contacts' ? (
@@ -122,6 +126,8 @@ export default function App() {
           onClose={() => setShowAddContact(false)}
         />
       )}
+
+      {showHelp && <HelpSheet onClose={() => setShowHelp(false)} />}
     </div>
   );
 }
