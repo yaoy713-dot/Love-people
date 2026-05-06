@@ -12,9 +12,7 @@ import { ContactDetailView } from './views/ContactDetailView';
 import { HistoryView } from './views/HistoryView';
 import { AddContactSheet } from './views/AddContactSheet';
 import { Nav } from './components/Nav';
-import type { ActiveView, CallNote, Profile, Frequency } from './types';
-
-type NoteFields = Omit<CallNote, 'id' | 'contactId' | 'callLogId' | 'date'>;
+import type { ActiveView, Profile, Frequency } from './types';
 
 export default function App() {
   const { user, loading, signIn } = useAuth();
@@ -40,10 +38,6 @@ export default function App() {
 
   const detailContact = detailContactId ? contacts.find((c) => c.id === detailContactId) ?? null : null;
 
-  async function handleCompleted(contactId: string, note?: NoteFields) {
-    await dashboard.handleCompleted(contactId, note);
-  }
-
   async function handleAddContact(name: string, frequency: Frequency, profile: Profile) {
     if (!user) return;
     await addContact(user.uid, {
@@ -57,7 +51,6 @@ export default function App() {
     setActiveView(view);
   }
 
-  // Profile toggle shown in header area of Home and Contacts
   const profileToggle = (
     <div className="flex bg-stone-100 rounded-xl p-0.5 shrink-0">
       {(['personal', 'work'] as Profile[]).map((p) => (
@@ -84,19 +77,18 @@ export default function App() {
             callNotes={callNotes}
             topics={topics}
             onBack={() => setDetailContactId(null)}
-            onCompleted={handleCompleted}
+            onCompleted={dashboard.handleCompleted}
             onNoAnswer={dashboard.handleNoAnswer}
             onBusy={dashboard.handleBusy}
           />
         ) : activeView === 'home' ? (
           <HomeView
             cards={dashboard.cards}
-            inWindow={dashboard.inWindow}
-            upcomingNames={dashboard.upcomingNames}
             allContacts={profileContacts}
+            topics={topics}
             onBusy={dashboard.handleBusy}
             onNoAnswer={dashboard.handleNoAnswer}
-            onCompleted={handleCompleted}
+            onCompleted={dashboard.handleCompleted}
             onSelectContact={(id) => setDetailContactId(id)}
             profileToggle={profileToggle}
           />

@@ -6,9 +6,10 @@ interface Props {
   card: DashboardCard;
   onCall: () => void;
   onBusy: () => void;
+  onSelect: () => void;
 }
 
-export function ContactCard({ card, onCall, onBusy }: Props) {
+export function ContactCard({ card, onCall, onBusy, onSelect }: Props) {
   const { contact, showTextPrompt, lastCalledDate, isExiting } = card;
 
   return (
@@ -23,16 +24,18 @@ export function ContactCard({ card, onCall, onBusy }: Props) {
         </div>
       )}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 font-semibold text-sm shrink-0">
-          {initials(contact.name)}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-semibold text-stone-800">{contact.name}</div>
-          <div className="flex items-center gap-2 mt-0.5">
-            <FrequencyBadge frequency={contact.frequency} />
-            <span className="text-xs text-stone-400">{lastCalledText(lastCalledDate)}</span>
+        <button onClick={onSelect} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+          <div className="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 font-semibold text-sm shrink-0">
+            {initials(contact.name)}
           </div>
-        </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-stone-800">{contact.name}</div>
+            <div className="flex items-center gap-2 mt-0.5">
+              <FrequencyBadge frequency={contact.frequency} />
+              <span className="text-xs text-stone-400">{lastCalledText(lastCalledDate)}</span>
+            </div>
+          </div>
+        </button>
         <div className="flex gap-1.5 shrink-0">
           <button
             onClick={onCall}

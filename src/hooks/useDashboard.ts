@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { buildContactPool, isCallingWindow } from '../lib/priority';
+import { buildContactPool } from '../lib/priority';
 import { getDailyState, markCalled, markBusy } from '../lib/dailyState';
 import { addCallLog, addCallNote } from '../firebase/firestore';
 import type { Contact, CallLog, CallNote, ContactStatus, DailyState } from '../types';
@@ -12,8 +12,6 @@ interface DashboardCard extends ContactStatus {
 
 interface DashboardResult {
   cards: DashboardCard[];
-  inWindow: boolean;
-  upcomingNames: string[];
   handleBusy: (contactId: string) => void;
   handleNoAnswer: (contactId: string) => void;
   handleCompleted: (contactId: string, note?: Omit<CallNote, 'id' | 'contactId' | 'callLogId' | 'date'>) => Promise<void>;
@@ -27,16 +25,12 @@ export function useDashboard(
   const [daily, setDaily] = useState<DailyState>(() => getDailyState());
   const [exitingIds, setExitingIds] = useState<Set<string>>(new Set());
 
-  const inWindow = isCallingWindow();
-
   const pool = useMemo(
     () => buildContactPool(contacts, callLogs, daily),
     [contacts, callLogs, daily]
   );
 
   const activeStatuses = pool.slice(0, ACTIVE_COUNT);
-
-  const upcomingNames = activeStatuses.slice(0, 3).map((s) => s.contact.name);
 
   const cards: DashboardCard[] = activeStatuses.map((s) => ({
     ...s,
@@ -67,10 +61,11 @@ export function useDashboard(
     [uid, replaceCard]
   );
 
+  // No-answer hides the contact for the rest of the day (not just 4 hours)
   const handleNoAnswer = useCallback(
     (contactId: string) => {
       addCallLog(uid, { contactId, date: new Date().toISOString(), outcome: 'no_answer' });
-      const newDaily = markBusy(contactId); // suppress from today's view after no-answer too
+      const newDaily = markCalled(contactId);
       replaceCard(contactId, newDaily);
     },
     [uid, replaceCard]
@@ -92,7 +87,7 @@ export function useDashboard(
     [uid, replaceCard]
   );
 
-  return { cards, inWindow, upcomingNames, handleBusy, handleNoAnswer, handleCompleted };
+  return { cards, handleBusy, handleNoAnswer, handleCompleted };
 }
 
 export type { DashboardCard };

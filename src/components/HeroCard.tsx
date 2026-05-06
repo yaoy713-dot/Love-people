@@ -6,9 +6,10 @@ interface Props {
   card: DashboardCard;
   onCall: () => void;
   onBusy: () => void;
+  onSelect: () => void;
 }
 
-export function HeroCard({ card, onCall, onBusy }: Props) {
+export function HeroCard({ card, onCall, onBusy, onSelect }: Props) {
   const { contact, showTextPrompt, lastCalledDate, isExiting } = card;
 
   return (
@@ -23,7 +24,7 @@ export function HeroCard({ card, onCall, onBusy }: Props) {
         </div>
       )}
 
-      <div className="flex items-center gap-3 mb-4">
+      <button onClick={onSelect} className="flex items-center gap-3 mb-4 w-full text-left">
         <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 font-semibold text-lg shrink-0">
           {initials(contact.name)}
         </div>
@@ -34,7 +35,7 @@ export function HeroCard({ card, onCall, onBusy }: Props) {
             <span className="text-xs text-stone-400">{lastCalledText(lastCalledDate)}</span>
           </div>
         </div>
-      </div>
+      </button>
 
       <div className="flex gap-2">
         <button

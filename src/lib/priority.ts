@@ -63,7 +63,3 @@ export function buildContactPool(
     });
 }
 
-export function isCallingWindow(date: Date = new Date()): boolean {
-  const day = date.getDay();
-  return day === 0 || day === 4 || day === 5 || day === 6;
-}

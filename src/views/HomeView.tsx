@@ -4,16 +4,18 @@ import { HeroCard } from '../components/HeroCard';
 import { ContactCard } from '../components/ContactCard';
 import { PostCallSheet } from './PostCallSheet';
 import { getUpcomingBirthdays, birthdayCountdownText } from '../lib/birthday';
+import { updateTopic } from '../firebase/firestore';
+import { useAuth } from '../hooks/useAuth';
 import type { DashboardCard } from '../hooks/useDashboard';
-import type { Contact, CallNote } from '../types';
+import type { Contact, CallNote, Topic } from '../types';
 
 type NoteFields = Omit<CallNote, 'id' | 'contactId' | 'callLogId' | 'date'>;
+type ClosedTopic = { topic: Topic; note: string };
 
 interface Props {
   cards: DashboardCard[];
-  inWindow: boolean;
-  upcomingNames: string[];
   allContacts: Contact[];
+  topics: Topic[];
   onBusy: (contactId: string) => void;
   onNoAnswer: (contactId: string) => void;
   onCompleted: (contactId: string, note?: NoteFields) => Promise<void>;
@@ -21,7 +23,8 @@ interface Props {
   profileToggle: React.ReactNode;
 }
 
-export function HomeView({ cards, inWindow, upcomingNames, allContacts, onBusy, onNoAnswer, onCompleted, onSelectContact, profileToggle }: Props) {
+export function HomeView({ cards, allContacts, topics, onBusy, onNoAnswer, onCompleted, onSelectContact, profileToggle }: Props) {
+  const { user } = useAuth();
   const [sheetContact, setSheetContact] = useState<Contact | null>(null);
 
   const today = new Date();
@@ -29,11 +32,26 @@ export function HomeView({ cards, inWindow, upcomingNames, allContacts, onBusy, 
   const dayName = dayNames[today.getDay()];
   const upcomingBirthdays = getUpcomingBirthdays(allContacts);
 
+  const discussTopics = sheetContact
+    ? topics.filter((t) => t.contactId === sheetContact.id && t.status === 'open' && t.type === 'discuss')
+    : [];
+
   function closeSheet() { setSheetContact(null); }
 
-  async function handleSheetCompleted(note?: NoteFields) {
+  async function handleSheetCompleted(note?: NoteFields, closedTopics?: ClosedTopic[]) {
     if (!sheetContact) return;
     closeSheet();
+    if (user && closedTopics?.length) {
+      await Promise.all(
+        closedTopics.map(({ topic, note: closingNote }) =>
+          updateTopic(user.uid, topic.id, {
+            status: 'discussed',
+            closedAt: new Date().toISOString(),
+            closingNote: closingNote || undefined,
+          })
+        )
+      );
+    }
     await onCompleted(sheetContact.id, note);
   }
 
@@ -67,16 +85,7 @@ export function HomeView({ cards, inWindow, upcomingNames, allContacts, onBusy, 
           </div>
         )}
 
-        {!inWindow ? (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-100 text-center mt-2">
-            <div className="text-3xl mb-3">💼</div>
-            <h2 className="font-semibold text-stone-900 mb-1">Focus on work today</h2>
-            <p className="text-sm text-stone-500 mb-4">Your calling window opens Thursday.</p>
-            {upcomingNames.length > 0 && (
-              <p className="text-sm text-stone-400">Lined up: {upcomingNames.join(' · ')}</p>
-            )}
-          </div>
-        ) : cards.length === 0 ? (
+        {cards.length === 0 ? (
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-100 text-center mt-2">
             <div className="text-3xl mb-3">✨</div>
             <h2 className="font-semibold text-stone-900 mb-1">All caught up</h2>
@@ -91,6 +100,7 @@ export function HomeView({ cards, inWindow, upcomingNames, allContacts, onBusy, 
                   card={card}
                   onCall={() => setSheetContact(card.contact)}
                   onBusy={() => onBusy(card.contact.id)}
+                  onSelect={() => onSelectContact(card.contact.id)}
                 />
               ) : (
                 <ContactCard
@@ -98,6 +108,7 @@ export function HomeView({ cards, inWindow, upcomingNames, allContacts, onBusy, 
                   card={card}
                   onCall={() => setSheetContact(card.contact)}
                   onBusy={() => onBusy(card.contact.id)}
+                  onSelect={() => onSelectContact(card.contact.id)}
                 />
               )
             )}
@@ -108,6 +119,7 @@ export function HomeView({ cards, inWindow, upcomingNames, allContacts, onBusy, 
       {sheetContact && (
         <PostCallSheet
           contact={sheetContact}
+          discussTopics={discussTopics}
           onCompleted={handleSheetCompleted}
           onNoAnswer={() => { closeSheet(); onNoAnswer(sheetContact.id); }}
           onBusy={() => { closeSheet(); onBusy(sheetContact.id); }}

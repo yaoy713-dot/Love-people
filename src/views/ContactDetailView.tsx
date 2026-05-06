@@ -5,7 +5,7 @@ import { PostCallSheet } from './PostCallSheet';
 import { format } from 'date-fns';
 import { updateContact, addTopic, updateTopic, deleteTopic } from '../firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
-import type { Contact, CallLog, CallNote, Topic } from '../types';
+import type { Contact, CallLog, CallNote, Topic, Frequency } from '../types';
 
 type NoteFields = Omit<CallNote, 'id' | 'contactId' | 'callLogId' | 'date'>;
 
@@ -15,6 +15,12 @@ const OUTCOME_COLOR: Record<string, string> = {
   no_answer: 'bg-stone-100 text-stone-500',
   busy: 'bg-amber-100 text-amber-600',
 };
+
+const FREQ_OPTIONS: { value: Frequency; label: string }[] = [
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
+];
 
 interface Props {
   contact: Contact;
@@ -33,8 +39,25 @@ export function ContactDetailView({
   const { user } = useAuth();
   const [showSheet, setShowSheet] = useState(false);
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
+
+  // Contact editing
+  const [editingContact, setEditingContact] = useState(false);
+  const [editName, setEditName] = useState(contact.name);
+  const [editFreq, setEditFreq] = useState<Frequency>(contact.frequency);
+
+  // Birthday
   const [editingBirthday, setEditingBirthday] = useState(false);
   const [birthdayInput, setBirthdayInput] = useState(contact.birthday ?? '');
+
+  // Phone
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [phoneInput, setPhoneInput] = useState(contact.phone ?? '');
+
+  // Notes
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesInput, setNotesInput] = useState(contact.notes ?? '');
+
+  // Topics
   const [newTopicText, setNewTopicText] = useState('');
   const [newTopicType, setNewTopicType] = useState<'discuss' | 'text'>('discuss');
   const [addingTopic, setAddingTopic] = useState(false);
@@ -49,10 +72,28 @@ export function ContactDetailView({
     callNotes.filter((n) => n.contactId === contact.id).map((n) => [n.callLogId, n])
   );
 
+  async function saveContactEdit() {
+    if (!user || !editName.trim()) return;
+    await updateContact(user.uid, contact.id, { name: editName.trim(), frequency: editFreq });
+    setEditingContact(false);
+  }
+
   async function saveBirthday() {
     if (!user) return;
     await updateContact(user.uid, contact.id, { birthday: birthdayInput.trim() || undefined });
     setEditingBirthday(false);
+  }
+
+  async function savePhone() {
+    if (!user) return;
+    await updateContact(user.uid, contact.id, { phone: phoneInput.trim() || undefined });
+    setEditingPhone(false);
+  }
+
+  async function saveNotes() {
+    if (!user) return;
+    await updateContact(user.uid, contact.id, { notes: notesInput.trim() || undefined });
+    setEditingNotes(false);
   }
 
   async function handleAddTopic() {
@@ -85,27 +126,68 @@ export function ContactDetailView({
 
   return (
     <div className="flex flex-col h-full">
+      {/* Header */}
       <div className="px-5 pt-6 pb-4 flex items-center gap-3 shrink-0">
         <button onClick={onBack} className="text-stone-500 -ml-1 min-w-[44px] min-h-[44px] flex items-center justify-center">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </button>
-        <div className="flex items-center gap-3 flex-1">
-          <div className="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 font-semibold">
-            {initials(contact.name)}
+
+        {editingContact ? (
+          <div className="flex-1 flex flex-col gap-2">
+            <input
+              autoFocus
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="text-base font-semibold border border-stone-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-stone-300"
+            />
+            <div className="flex gap-1">
+              {FREQ_OPTIONS.map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setEditFreq(f.value)}
+                  className={`flex-1 text-xs font-medium py-1.5 rounded-lg border transition-colors ${
+                    editFreq === f.value ? 'bg-stone-900 text-white border-stone-900' : 'border-stone-200 text-stone-600'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={saveContactEdit} disabled={!editName.trim()} className="text-sm font-medium text-white bg-stone-900 px-4 py-1.5 rounded-xl disabled:opacity-40">Save</button>
+              <button onClick={() => { setEditingContact(false); setEditName(contact.name); setEditFreq(contact.frequency); }} className="text-sm text-stone-400 px-2">Cancel</button>
+            </div>
           </div>
-          <div>
-            <div className="font-semibold text-stone-900">{contact.name}</div>
-            <FrequencyBadge frequency={contact.frequency} />
+        ) : (
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 font-semibold shrink-0">
+              {initials(contact.name)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-stone-900 truncate">{contact.name}</span>
+                <button onClick={() => setEditingContact(true)} className="text-stone-300 shrink-0 min-h-[32px] min-w-[32px] flex items-center justify-center">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </button>
+              </div>
+              <FrequencyBadge frequency={contact.frequency} />
+            </div>
           </div>
-        </div>
-        <button
-          onClick={() => setShowSheet(true)}
-          className="bg-stone-900 text-white text-sm font-medium px-4 py-2 rounded-xl min-h-[44px] active:scale-95 transition-transform"
-        >
-          Log call
-        </button>
+        )}
+
+        {!editingContact && (
+          <button
+            onClick={() => setShowSheet(true)}
+            className="bg-stone-900 text-white text-sm font-medium px-4 py-2 rounded-xl min-h-[44px] active:scale-95 transition-transform shrink-0"
+          >
+            Log call
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-4">
@@ -147,7 +229,7 @@ export function ContactDetailView({
                     newTopicType === 'text' ? 'bg-stone-900 text-white border-stone-900' : 'border-stone-200 text-stone-600'
                   }`}
                 >
-                  💬 Send as text
+                  📱 Send as text
                 </button>
               </div>
               <div className="flex gap-2 mt-2">
@@ -177,8 +259,16 @@ export function ContactDetailView({
                   <span className="text-base mt-0.5">{topic.type === 'text' ? '📱' : '💬'}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-stone-800">{topic.text}</p>
-                    {topic.type === 'text' && (
-                      <span className="text-xs text-blue-500 font-medium">Text them this</span>
+                    {topic.type === 'text' && contact.phone && (
+                      <a
+                        href={`sms:${contact.phone}?body=${encodeURIComponent(topic.text)}`}
+                        className="text-xs text-blue-500 font-medium"
+                      >
+                        Tap to text →
+                      </a>
+                    )}
+                    {topic.type === 'text' && !contact.phone && (
+                      <span className="text-xs text-stone-400">Text them this</span>
                     )}
                   </div>
                   <div className="flex gap-1 shrink-0">
@@ -201,6 +291,42 @@ export function ContactDetailView({
           )}
         </div>
 
+        {/* Phone */}
+        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm px-4 py-3">
+          {editingPhone ? (
+            <div className="flex items-center gap-2">
+              <input
+                autoFocus
+                type="tel"
+                value={phoneInput}
+                onChange={(e) => setPhoneInput(e.target.value)}
+                placeholder="+1 555 000 0000"
+                className="flex-1 border border-stone-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-stone-300"
+              />
+              <button onClick={savePhone} className="text-sm font-medium text-stone-900 min-h-[44px] px-2">Save</button>
+              <button onClick={() => setEditingPhone(false)} className="text-sm text-stone-400 min-h-[44px] px-2">Cancel</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <span className="text-xl">📞</span>
+              <div className="flex-1">
+                <div className="text-sm font-medium text-stone-700">Phone</div>
+                {contact.phone ? (
+                  <a href={`tel:${contact.phone}`} className="text-xs text-blue-500 font-medium">{contact.phone}</a>
+                ) : (
+                  <div className="text-xs text-stone-400">Not set</div>
+                )}
+              </div>
+              <button
+                onClick={() => { setPhoneInput(contact.phone ?? ''); setEditingPhone(true); }}
+                className="text-xs text-stone-400 underline underline-offset-2 min-h-[44px] flex items-center"
+              >
+                {contact.phone ? 'Edit' : 'Add'}
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Birthday */}
         <div className="bg-white rounded-2xl border border-stone-100 shadow-sm px-4 py-3 flex items-center gap-3">
           <span className="text-xl">🎂</span>
@@ -208,6 +334,7 @@ export function ContactDetailView({
             {editingBirthday ? (
               <div className="flex items-center gap-2">
                 <input
+                  autoFocus
                   type="text"
                   value={birthdayInput}
                   onChange={(e) => setBirthdayInput(e.target.value)}
@@ -234,6 +361,44 @@ export function ContactDetailView({
               </div>
             )}
           </div>
+        </div>
+
+        {/* Notes */}
+        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm px-4 py-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-base">📝</span>
+              <span className="text-sm font-medium text-stone-700">Notes</span>
+            </div>
+            {!editingNotes && (
+              <button
+                onClick={() => { setNotesInput(contact.notes ?? ''); setEditingNotes(true); }}
+                className="text-xs text-stone-400 underline underline-offset-2 min-h-[32px] flex items-center"
+              >
+                {contact.notes ? 'Edit' : 'Add'}
+              </button>
+            )}
+          </div>
+          {editingNotes ? (
+            <div>
+              <textarea
+                autoFocus
+                value={notesInput}
+                onChange={(e) => setNotesInput(e.target.value)}
+                placeholder={`Anything worth remembering about ${contact.name}…`}
+                rows={3}
+                className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-stone-300 resize-none"
+              />
+              <div className="flex gap-2 mt-2">
+                <button onClick={saveNotes} className="text-sm font-medium text-white bg-stone-900 px-4 py-1.5 rounded-xl">Save</button>
+                <button onClick={() => setEditingNotes(false)} className="text-sm text-stone-400 px-2">Cancel</button>
+              </div>
+            </div>
+          ) : contact.notes ? (
+            <p className="text-sm text-stone-600 whitespace-pre-wrap">{contact.notes}</p>
+          ) : (
+            <p className="text-sm text-stone-400">Nothing yet.</p>
+          )}
         </div>
 
         {/* Call log */}
