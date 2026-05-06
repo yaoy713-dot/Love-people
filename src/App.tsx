@@ -3,8 +3,10 @@ import { useAuth } from './hooks/useAuth';
 import { useContacts } from './hooks/useContacts';
 import { useCallLogs } from './hooks/useCallLogs';
 import { useTopics } from './hooks/useTopics';
+import { useMemos } from './hooks/useMemos';
 import { useDashboard } from './hooks/useDashboard';
 import { addContact } from './firebase/firestore';
+import { computeStreak } from './lib/priority';
 import { LoginView } from './views/LoginView';
 import { HomeView } from './views/HomeView';
 import { ContactsView } from './views/ContactsView';
@@ -19,6 +21,7 @@ export default function App() {
   const { contacts, ready } = useContacts(user?.uid ?? null);
   const { callLogs, callNotes } = useCallLogs(user?.uid ?? null);
   const topics = useTopics(user?.uid ?? null);
+  const memos = useMemos(user?.uid ?? null);
 
   const [activeView, setActiveView] = useState<ActiveView>('home');
   const [activeProfile, setActiveProfile] = useState<Profile>('personal');
@@ -37,6 +40,7 @@ export default function App() {
   }
 
   const detailContact = detailContactId ? contacts.find((c) => c.id === detailContactId) ?? null : null;
+  const detailStreak = detailContact ? computeStreak(detailContact, callLogs) : 0;
 
   async function handleAddContact(name: string, frequency: Frequency, profile: Profile) {
     if (!user) return;
@@ -76,6 +80,8 @@ export default function App() {
             callLogs={callLogs}
             callNotes={callNotes}
             topics={topics}
+            memos={memos}
+            streak={detailStreak}
             onBack={() => setDetailContactId(null)}
             onCompleted={dashboard.handleCompleted}
             onNoAnswer={dashboard.handleNoAnswer}

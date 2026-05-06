@@ -9,6 +9,15 @@ export function lastCalledText(dateStr: string | null): string {
   return `${days} days ago`;
 }
 
+export function relativeDate(isoString: string): string {
+  const date = new Date(isoString);
+  if (isToday(date)) return 'Today';
+  if (isYesterday(date)) return 'Yesterday';
+  const days = differenceInDays(new Date(), date);
+  if (days < 30) return `${days}d ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
+
 export function initials(name: string): string {
   return name
     .split(' ')

@@ -11,12 +11,13 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './config';
-import type { Contact, CallLog, CallNote, Topic } from '../types';
+import type { Contact, CallLog, CallNote, Topic, Memo } from '../types';
 
 const contactsCol = (uid: string) => collection(db, 'users', uid, 'contacts');
 const callLogsCol = (uid: string) => collection(db, 'users', uid, 'callLogs');
 const callNotesCol = (uid: string) => collection(db, 'users', uid, 'callNotes');
 const topicsCol = (uid: string) => collection(db, 'users', uid, 'topics');
+const memosCol = (uid: string) => collection(db, 'users', uid, 'memos');
 
 export function subscribeContacts(uid: string, cb: (contacts: Contact[]) => void): Unsubscribe {
   return onSnapshot(contactsCol(uid), (snap) => {
@@ -83,4 +84,20 @@ export async function updateTopic(uid: string, topicId: string, patch: Partial<T
 
 export async function deleteTopic(uid: string, topicId: string): Promise<void> {
   await deleteDoc(doc(topicsCol(uid), topicId));
+}
+
+export function subscribeMemos(uid: string, cb: (memos: Memo[]) => void): Unsubscribe {
+  const q = query(memosCol(uid), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Memo)));
+  });
+}
+
+export async function addMemo(uid: string, memo: Omit<Memo, 'id'>): Promise<string> {
+  const ref = await addDoc(memosCol(uid), memo);
+  return ref.id;
+}
+
+export async function deleteMemo(uid: string, memoId: string): Promise<void> {
+  await deleteDoc(doc(memosCol(uid), memoId));
 }

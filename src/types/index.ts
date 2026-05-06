@@ -44,6 +44,13 @@ export interface CallNote {
   followUp: string;
 }
 
+export interface Memo {
+  id: string;
+  contactId: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface BusyEntry {
   contactId: string;
   busyAt: string;
@@ -61,6 +68,7 @@ export interface ContactStatus {
   noAnswerCount: number;
   showTextPrompt: boolean;
   lastCalledDate: string | null;
+  streak: number;
 }
 
 export type ActiveView = 'home' | 'contacts' | 'history';

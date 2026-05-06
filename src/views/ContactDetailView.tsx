@@ -3,9 +3,11 @@ import { FrequencyBadge } from '../components/FrequencyBadge';
 import { initials } from '../lib/relativeTime';
 import { PostCallSheet } from './PostCallSheet';
 import { format } from 'date-fns';
-import { updateContact, addTopic, updateTopic, deleteTopic } from '../firebase/firestore';
+import { updateContact, addTopic, updateTopic, deleteTopic, addMemo, deleteMemo } from '../firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
-import type { Contact, CallLog, CallNote, Topic, Frequency } from '../types';
+import { relativeDate } from '../lib/relativeTime';
+import { streakLabel } from '../lib/priority';
+import type { Contact, CallLog, CallNote, Topic, Memo, Frequency } from '../types';
 
 type NoteFields = Omit<CallNote, 'id' | 'contactId' | 'callLogId' | 'date'>;
 
@@ -27,6 +29,8 @@ interface Props {
   callLogs: CallLog[];
   callNotes: CallNote[];
   topics: Topic[];
+  memos: Memo[];
+  streak?: number;
   onBack: () => void;
   onCompleted: (contactId: string, note?: NoteFields) => Promise<void>;
   onNoAnswer: (contactId: string) => void;
@@ -34,7 +38,7 @@ interface Props {
 }
 
 export function ContactDetailView({
-  contact, callLogs, callNotes, topics, onBack, onCompleted, onNoAnswer, onBusy
+  contact, callLogs, callNotes, topics, memos, streak = 0, onBack, onCompleted, onNoAnswer, onBusy
 }: Props) {
   const { user } = useAuth();
   const [showSheet, setShowSheet] = useState(false);
@@ -62,7 +66,12 @@ export function ContactDetailView({
   const [newTopicType, setNewTopicType] = useState<'discuss' | 'text'>('discuss');
   const [addingTopic, setAddingTopic] = useState(false);
 
+  // Memos
+  const [memoInput, setMemoInput] = useState('');
+  const [savingMemo, setSavingMemo] = useState(false);
+
   const openTopics = topics.filter((t) => t.contactId === contact.id && t.status === 'open');
+  const contactMemos = memos.filter((m) => m.contactId === contact.id);
 
   const logs = callLogs
     .filter((l) => l.contactId === contact.id)
@@ -94,6 +103,23 @@ export function ContactDetailView({
     if (!user) return;
     await updateContact(user.uid, contact.id, { notes: notesInput.trim() || undefined });
     setEditingNotes(false);
+  }
+
+  async function handleAddMemo() {
+    if (!user || !memoInput.trim() || savingMemo) return;
+    setSavingMemo(true);
+    await addMemo(user.uid, {
+      contactId: contact.id,
+      text: memoInput.trim(),
+      createdAt: new Date().toISOString(),
+    });
+    setMemoInput('');
+    setSavingMemo(false);
+  }
+
+  async function handleDeleteMemo(memoId: string) {
+    if (!user) return;
+    await deleteMemo(user.uid, memoId);
   }
 
   async function handleAddTopic() {
@@ -175,7 +201,14 @@ export function ContactDetailView({
                   </svg>
                 </button>
               </div>
-              <FrequencyBadge frequency={contact.frequency} />
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                <FrequencyBadge frequency={contact.frequency} />
+                {streak >= 2 && (
+                  <span className="text-xs font-medium text-orange-600">
+                    {streakLabel(contact.frequency, streak)}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -398,6 +431,50 @@ export function ContactDetailView({
             <p className="text-sm text-stone-600 whitespace-pre-wrap">{contact.notes}</p>
           ) : (
             <p className="text-sm text-stone-400">Nothing yet.</p>
+          )}
+        </div>
+
+        {/* Quick notes / Memos */}
+        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
+          <div className="px-4 pt-3 pb-3">
+            <span className="text-sm font-semibold text-stone-800">Quick notes</span>
+            <div className="flex gap-2 mt-2">
+              <input
+                type="text"
+                value={memoInput}
+                onChange={(e) => setMemoInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddMemo(); }}
+                placeholder="Jot something down…"
+                className="flex-1 border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-stone-300"
+              />
+              <button
+                onClick={handleAddMemo}
+                disabled={!memoInput.trim() || savingMemo}
+                className="bg-stone-900 text-white text-sm font-medium px-4 py-2 rounded-xl disabled:opacity-40 min-h-[44px] active:scale-95 transition-transform"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+          {contactMemos.length === 0 ? (
+            <p className="px-4 pb-4 text-sm text-stone-400">Nothing yet — jot down what's on your mind</p>
+          ) : (
+            <div className="divide-y divide-stone-50">
+              {contactMemos.map((memo) => (
+                <div key={memo.id} className="px-4 py-3 flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-stone-800">{memo.text}</p>
+                    <p className="text-xs text-stone-400 mt-0.5">{relativeDate(memo.createdAt)}</p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteMemo(memo.id)}
+                    className="text-stone-300 px-2 py-1 min-h-[32px] shrink-0 text-sm"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
