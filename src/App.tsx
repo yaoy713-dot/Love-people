@@ -76,9 +76,11 @@ export default function App() {
             cards={dashboard.cards}
             inWindow={dashboard.inWindow}
             upcomingNames={dashboard.upcomingNames}
+            allContacts={contacts}
             onBusy={handleBusy}
             onNoAnswer={handleNoAnswer}
             onCompleted={handleCompleted}
+            onSelectContact={(id) => { setDetailContactId(id); setActiveView('contacts'); }}
           />
         ) : activeView === 'contacts' ? (
           <ContactsView

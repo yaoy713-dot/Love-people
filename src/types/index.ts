@@ -7,6 +7,7 @@ export interface Contact {
   frequency: Frequency;
   phone?: string;
   notes?: string;
+  birthday?: string; // "MM-DD" e.g. "03-15"
   createdAt: string;
 }
 
