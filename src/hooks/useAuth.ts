@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   GoogleAuthProvider,
+  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   signOut as firebaseSignOut,
@@ -8,6 +9,8 @@ import {
   type User,
 } from 'firebase/auth';
 import { auth } from '../firebase/config';
+
+const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -19,12 +22,21 @@ export function useAuth() {
       setLoading(false);
     });
 
-    getRedirectResult(auth).catch(() => {});
+    if (isMobile) {
+      getRedirectResult(auth).catch(() => {});
+    }
 
     return unsub;
   }, []);
 
-  const signIn = () => signInWithRedirect(auth, new GoogleAuthProvider());
+  const signIn = () => {
+    const provider = new GoogleAuthProvider();
+    if (isMobile) {
+      return signInWithRedirect(auth, provider);
+    }
+    return signInWithPopup(auth, provider);
+  };
+
   const signOut = () => firebaseSignOut(auth);
 
   return { user, loading, signIn, signOut };
