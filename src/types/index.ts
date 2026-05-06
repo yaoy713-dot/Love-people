@@ -1,14 +1,29 @@
 export type Frequency = 'weekly' | 'monthly' | 'quarterly';
 export type CallOutcome = 'completed' | 'no_answer' | 'busy';
+export type Profile = 'personal' | 'work';
+export type TopicType = 'discuss' | 'text';
+export type TopicStatus = 'open' | 'discussed' | 'texted';
 
 export interface Contact {
   id: string;
   name: string;
   frequency: Frequency;
+  profile: Profile;
   phone?: string;
   notes?: string;
   birthday?: string; // "MM-DD" e.g. "03-15"
   createdAt: string;
+}
+
+export interface Topic {
+  id: string;
+  contactId: string;
+  text: string;
+  type: TopicType;
+  status: TopicStatus;
+  createdAt: string;
+  closedAt?: string;
+  closingNote?: string;
 }
 
 export interface CallLog {

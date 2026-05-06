@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type React from 'react';
 import { HeroCard } from '../components/HeroCard';
 import { ContactCard } from '../components/ContactCard';
 import { PostCallSheet } from './PostCallSheet';
@@ -17,9 +18,10 @@ interface Props {
   onNoAnswer: (contactId: string) => void;
   onCompleted: (contactId: string, note?: NoteFields) => Promise<void>;
   onSelectContact: (id: string) => void;
+  profileToggle: React.ReactNode;
 }
 
-export function HomeView({ cards, inWindow, upcomingNames, allContacts, onBusy, onNoAnswer, onCompleted, onSelectContact }: Props) {
+export function HomeView({ cards, inWindow, upcomingNames, allContacts, onBusy, onNoAnswer, onCompleted, onSelectContact, profileToggle }: Props) {
   const [sheetContact, setSheetContact] = useState<Contact | null>(null);
 
   const today = new Date();
@@ -38,7 +40,10 @@ export function HomeView({ cards, inWindow, upcomingNames, allContacts, onBusy, 
   return (
     <div className="flex flex-col h-full">
       <div className="px-5 pt-6 pb-3">
-        <div className="text-sm text-stone-400 font-medium">{dayName}</div>
+        <div className="flex items-center justify-between mb-1">
+          <div className="text-sm text-stone-400 font-medium">{dayName}</div>
+          {profileToggle}
+        </div>
         <h1 className="text-2xl font-bold text-stone-900">Love People</h1>
       </div>
 
